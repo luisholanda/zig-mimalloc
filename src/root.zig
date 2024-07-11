@@ -1,6 +1,18 @@
+//! This module provides a idiomatic interface to the mimalloc allocator library.
+//!
+//! The easiest way to start is using `default_allocator`, which uses the default allocator instances
+//! for each thread in the process. This is the same interface as in C or Rust.
+//!
+//! The module also provides the `Heap` type, which represents a mimalloc heap, allowing more control
+//! on how the memory is allocated. This type can be used similarly to the `std`s GPA for more controlled
+//! single-thread allocation, but it also can be used similarly to the `std`'s Arena allocator.
+//!
+//! In addition to these, we also expose the `Arena` API, allowing for more control over where `Heap`s
+//! allocate memory.
 const builtin = @import("builtin");
 const std = @import("std");
 
+/// The raw C mimalloc API.
 pub const C = @cImport({
     @cInclude("mimalloc.h");
 });
@@ -18,7 +30,8 @@ pub const default_allocator: std.mem.Allocator = ga: {
             ptr_align: u8,
             _: usize,
         ) ?[*]u8 {
-            const ptr = C.mi_malloc_aligned(len, ptr_align) orelse return null;
+            const alignment = @as(usize, 1) << @as(std.mem.Allocator.Log2Align, @intCast(ptr_align));
+            const ptr = C.mi_malloc_aligned(len, alignment) orelse return null;
 
             return @ptrCast(ptr);
         }
@@ -75,7 +88,7 @@ pub const Heap = struct {
 
     /// Get the default heap for the current thread.
     ///
-    /// This is the same heap used for the global allocator.
+    /// This is the same heap used for the global allocator and thus usually not necessary.
     pub fn defaultForCurrentThread() std.mem.Allocator.Error!Heap {
         return fromRaw(C.mi_heap_get_default());
     }
@@ -92,6 +105,9 @@ pub const Heap = struct {
     }
 
     /// Safely deinitializes the heap, sending any outstanding allocations to the global heap.
+    ///
+    /// This is useful if the thread sends allocations to other threads and we can't be sure
+    /// that they aren't needed anymore.
     pub fn safeDeinit(h: Heap) void {
         C.mi_heap_delete(h.raw);
     }
@@ -105,9 +121,12 @@ pub const Heap = struct {
                 ptr_align: u8,
                 _: usize,
             ) ?[*]u8 {
-                const heap = getHeapPtr(ctx);
+                if (enable_asserts) std.debug.assert(ctx != null);
 
-                const ptr = C.mi_heap_malloc_aligned(heap, len, ptr_align) orelse return null;
+                const heap: *C.mi_heap_t = @ptrCast(ctx.?);
+
+                const alignment = @as(usize, 1) << @as(std.mem.Allocator.Log2Align, @intCast(ptr_align));
+                const ptr = C.mi_heap_malloc_aligned(heap, len, alignment) orelse return null;
 
                 return @ptrCast(ptr);
             }
@@ -124,12 +143,6 @@ pub const Heap = struct {
 
             fn free(_: ?*anyopaque, buf: []u8, _: u8, _: usize) void {
                 C.mi_free(buf.ptr);
-            }
-
-            fn getHeapPtr(ctx: ?*anyopaque) *C.mi_heap_t {
-                if (enable_asserts) std.debug.assert(ctx != null);
-
-                return @ptrCast(ctx.?);
             }
         };
 
@@ -167,7 +180,7 @@ pub const Heap = struct {
             ) callconv(.C) bool {
                 if (enable_asserts) std.debug.assert(arg != null);
 
-                const capacity: *usize = @ptrCast(arg.?);
+                const capacity: *usize = @alignCast(@ptrCast(arg.?));
                 capacity.* += area.*.reserved;
 
                 return true;
