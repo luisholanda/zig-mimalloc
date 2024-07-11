@@ -43,6 +43,7 @@
           alejandra.enable = true;
           deadnix.enable = true;
           trim-trailing-whitespace.enable = true;
+          trim-trailing-whitespace.excludes = ["mimalloc/"];
 
           zig-fmt = {
             enable = true;

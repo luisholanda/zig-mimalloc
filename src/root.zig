@@ -209,15 +209,23 @@ pub const Heap = struct {
 pub const Arena = struct {
     id: C.mi_arena_id_t,
 
+    /// Options to `Arena.init`.`
     pub const InitOpts = struct {
+        /// Allow the use of large OS pages.
         allow_large: bool = true,
+        /// Should the memory be initially commited?
         commit: bool = false,
+        /// If enabled only heaps associated with this arena can allocate on it.
         exclusive: bool = false,
     };
 
+    /// Options to `Arena.initHuge`.
     pub const HugeOpts = struct {
+        /// If enabled only heaps associated with this arena can allocate on it.
         exclusive: bool = false,
+        /// The NUMA node where the memory will be reserved.
         numa_node: c_int = -1,
+        /// Maximum time to wait for the memory to be reserved.
         timeout_msecs: usize = 0,
     };
 
@@ -322,39 +330,39 @@ pub const Option = enum(u5) {
     /// 1= do not use arena's for allocation (except if using specific arena id's).
     disallow_arena_alloc = C.mi_option_disallow_arena_alloc,
 
-    fn disable(o: Option) void {
-        C.mi_option_disable(o);
+    pub fn disable(o: Option) void {
+        C.mi_option_disable(@intFromEnum(o));
     }
 
-    fn enable(o: Option) void {
-        C.mi_option_enable(o);
+    pub fn enable(o: Option) void {
+        C.mi_option_enable(@intFromEnum(o));
     }
 
-    fn get(o: Option) u64 {
-        return C.mi_option_get(o);
+    pub fn get(o: Option) u32 {
+        return @intCast(C.mi_option_get(@intFromEnum(o)));
     }
 
-    fn getSize(o: Option) usize {
-        return C.mi_option_get_size(o);
+    pub fn getSize(o: Option) usize {
+        return C.mi_option_get_size(@intFromEnum(o));
     }
 
-    fn isEnabled(o: Option) bool {
-        return C.mi_option_is_enabled(o);
+    pub fn isEnabled(o: Option) bool {
+        return C.mi_option_is_enabled(@intFromEnum(o));
     }
 
-    fn set(o: Option, value: u64) void {
-        C.mi_option_set(o, value);
+    pub fn set(o: Option, value: u32) void {
+        C.mi_option_set(@intFromEnum(o), value);
     }
 
-    fn setDefault(o: Option, value: u64) void {
-        C.mi_option_set_default(o, value);
+    pub fn setDefault(o: Option, value: u32) void {
+        C.mi_option_set_default(@intFromEnum(o), value);
     }
 
-    fn setEnabled(o: Option, enabled: bool) void {
-        C.mi_option_set_enabled(o, enabled);
+    pub fn setEnabled(o: Option, enabled: bool) void {
+        C.mi_option_set_enabled(@intFromEnum(o), enabled);
     }
 
-    fn setEnabledDefault(o: Option, enabled: bool) void {
-        C.mi_option_set_enabled_default(o, enabled);
+    pub fn setEnabledDefault(o: Option, enabled: bool) void {
+        C.mi_option_set_enabled_default(@intFromEnum(o), enabled);
     }
 };
