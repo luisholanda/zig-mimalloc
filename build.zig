@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
 
     const secure = b.option(bool, "secure", "Use full security mitigations, see mimalloc source for details") orelse false;
     const debug_full = b.option(bool, "debug-full", "Use full internal heap invariant checking in Debug mode (expensive)") orelse false;
-    const no_debug = b.option(bool, "no-debug", "Disable all internal heap invariant checking") orelse false;
+    const no_debug = b.option(bool, "no-debug", "Disable all internal heap invariant checking") orelse (optimize == .ReleaseFast);
     const padding = b.option(bool, "padding", "Enable padding to detect heap block overflows") orelse secure;
     const valgrind = b.option(bool, "valgrind", "Compile with valgrind support") orelse false;
 
@@ -96,8 +96,7 @@ fn buildZigMimalloc(b: *std.Build, opts: BuildOpts) *std.Build.Module {
     } else {
         switch (opts.optimize) {
             .Debug => lib.addCMacro("MI_DEBUG", if (opts.debug_full) "3" else "1"),
-            .ReleaseSafe => lib.addCMacro("MI_DEBUG", "1"),
-            else => lib.addCMacro("NDEBUG", ""),
+            else => lib.addCMacro("MI_DEBUG", "1"),
         }
     }
 
