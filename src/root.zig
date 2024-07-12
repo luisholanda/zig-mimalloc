@@ -13,9 +13,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 /// The raw C mimalloc API.
-pub const C = @cImport({
-    @cInclude("mimalloc.h");
-});
+pub const C = @import("c.zig");
 
 const enable_asserts = builtin.mode == .Debug;
 
